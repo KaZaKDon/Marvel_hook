@@ -1,0 +1,8 @@
+{
+    "extends": ["react-app", "plugin:react/recommended"],
+    "plugins": ["react"],
+    "rules": {
+        "react/prop-types": "warn",
+        "react/react-in-jsx-scope": "off"
+    }
+}
