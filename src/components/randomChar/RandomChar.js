@@ -1,8 +1,9 @@
 import { useState, useEffect } from 'react';
+//import PropTypes from 'prop-types';
 import { charShape } from '../../utils/charShape';
 
 import './randomChar.scss';
-import MarvelService from '../../services/MarvelService';
+import useMarvelService from '../../services/MarvelService';
 import Skeleton from '../skeleton/Skeleton';
 import Spinner from '../spinner/Spinner';
 import ErrorMessage from '../errorMessage/ErrorMessage';
@@ -11,56 +12,44 @@ import abyss from '../../resources/img/abyss.jpg'; // заглушка на сл
 
 const RandomChar = () => {
     const [char, setChar] = useState(null);
-    const [loading, setLoading] = useState(true);
-    const [error, setError] = useState(false);
-
-    const marvelService = new MarvelService();
+    const { loading, error, getCharacter, clearError } = useMarvelService();
 
     useEffect(() => {
         updateChar();
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, []);
 
-    const onCharLoaded = (charData) => {
-        try {
-            const transformed = transformChar(charData);
-            setChar(transformed);
-            setLoading(false);
-        } catch (e) {
-            console.error('Marvel fetch error:', e);
-            setError(true);
-            setLoading(false);
-        }
-    };
-
-    const onError = () => {
-        setLoading(false);
-        setError(true);
-    };
-
     const updateChar = () => {
-        setLoading(true);
-        setError(false);
-        const id = Math.floor(Math.random() * (20 - 1) + 1); // случайный ID Marvel
-        marvelService.getCharacter(id)
+        clearError()
+        const id = Math.floor(Math.random() * 20 + 1); // id от 1 до 20
+        getCharacter(id)
             .then(onCharLoaded)
-            .catch(onError);
+            .catch((e) => console.error('Marvel fetch error:', e));
+    };
+
+    const onCharLoaded = (charData) => {
+        const transformed = transformChar(charData);
+        setChar(transformed);
     };
 
     const transformChar = (char) => {
-        const isImageAvailable = char.thumbnail?.path && !char.thumbnail.path.includes('image_not_available');
+        const path = char.thumbnail?.path;
+        const extension = char.thumbnail?.extension;
+
+        const thumbnail = path && extension ? `${path}.${extension}` : abyss;
+        const isImageAvailable = path && !path.includes('image_not_available');
 
         return {
             id: char.id,
             name: char.name || 'Имя отсутствует',
             description: char.description || 'Описание отсутствует',
-            thumbnail: char.thumbnail
-                ? `${char.thumbnail.path}.${char.thumbnail.extension}`
-                : abyss,
+            thumbnail,
             homepage: char.urls?.[0]?.url || '#',
             wiki: char.urls?.[1]?.url || '#',
             imageAvailable: !!isImageAvailable,
-            comics: (char.comics?.items || []).map(item => ({ name: item.name })),
+            comics: (char.comics?.items || []).map(item =>
+                typeof item === 'string' ? { name: item } : { name: item.name }
+            ),
         };
     };
 
@@ -80,9 +69,7 @@ const RandomChar = () => {
                     Random character for today!<br />
                     Do you want to get to know him better?
                 </p>
-                <p className="randomchar__title">
-                    Or choose another one
-                </p>
+                <p className="randomchar__title">Or choose another one</p>
                 <button className="button button__main" onClick={updateChar}>
                     <div className="inner">try it</div>
                 </button>
@@ -95,12 +82,13 @@ const RandomChar = () => {
 const View = ({ char }) => {
     const { name, description, thumbnail, homepage, wiki, imageAvailable, comics } = char;
 
-    const shortDescr = description.length > 150 ? description.slice(0, 150) + '...' : description;
+    const shortDescr =
+        description.length > 150 ? description.slice(0, 150) + '...' : description;
 
     const imgStyle = {
         width: 200,
         height: 200,
-        objectFit: imageAvailable ? 'cover' : 'contain'
+        objectFit: imageAvailable ? 'cover' : 'contain',
     };
 
     return (
@@ -121,8 +109,10 @@ const View = ({ char }) => {
                 <ul className="char__comics-list">
                     {comics.length > 0
                         ? comics.map((item, i) => (
-                            <li key={i} className="char__comics-item">{item.name}</li>
-                        ))
+                              <li key={i} className="char__comics-item">
+                                  {item.name}
+                              </li>
+                          ))
                         : 'Нет ни одного комикса с участием данного персонажа'}
                 </ul>
             </div>
@@ -131,7 +121,7 @@ const View = ({ char }) => {
 };
 
 View.propTypes = {
-    char: charShape.isRequired
+    char: charShape.isRequired,
 };
 
 export default RandomChar;

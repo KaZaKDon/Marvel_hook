@@ -1,37 +1,28 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect } from 'react';
 import PropTypes from 'prop-types';
 import { charShape } from '../../utils/charShape';
 import './charInfo.scss';
 
-import MarvelService from '../../services/MarvelService';
+import useMarvelService from '../../services/MarvelService';
 import Spinner from '../spinner/Spinner';
 import ErrorMessage from '../errorMessage/ErrorMessage';
 import Skeleton from '../skeleton/Skeleton';
 
 const CharInfo = ({ charId }) => {
     const [char, setChar] = useState(null);
-    const [loading, setLoading] = useState(false);
-    const [error, setError] = useState(false);
 
-    const marvelService = useRef(new MarvelService());
+    const {loading, error, getCharacter, clearError} = useMarvelService();
 
 useEffect(() => {
     if (!charId) return;
 
-    setLoading(true);
-    setError(false);
-
-    marvelService.current.getCharacter(charId)
+    clearError();
+    getCharacter(charId)
         .then((charData) => {
             setChar(charData);
-            setLoading(false);
         })
-        .catch(() => {
-            setError(true);
-            setLoading(false);
-        });
 
-}, [charId]); // эффект зависит от charId
+}, []); // эффект зависит от charId
 
     const skeleton = !char && !loading && !error ? <Skeleton /> : null;
     const spinner = loading ? <Spinner /> : null;
