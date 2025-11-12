@@ -22,7 +22,7 @@ useEffect(() => {
             setChar(charData);
         })
 
-}, []); // эффект зависит от charId
+}, [charId, clearError, getCharacter]); // эффект зависит от charId
 
     const skeleton = !char && !loading && !error ? <Skeleton /> : null;
     const spinner = loading ? <Spinner /> : null;

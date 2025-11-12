@@ -1,4 +1,5 @@
 import { useHttp } from "../hooks/http.hook";
+import { useCallback } from "react";
 
 const useMarvelService = () => {
     const { loading, request, error, clearError } = useHttp();
@@ -7,35 +8,41 @@ const useMarvelService = () => {
     const _apiKey = 'd4eecb0c66dedbfae4eab45d312fc1df';
     const _baseOffset = 0;
 
-    // === Получить список комиксов ===
-    const getAllComics = async (offset = _baseOffset) => {
+    const getAllComics = useCallback(async (offset = 0) => {
         const res = await request(`${_apiBase}comics?limit=8&offset=${offset}&apikey=${_apiKey}`);
-        return res.data.results.map(_transformComics);
-    };
+        return res.data.results.map(_transformComic);
+    }, [request]);
 
-    // === Преобразование данных ===
-    const _transformComics = (comic) => {
+    const getComics = useCallback(async (id) => {
+        const res = await request(`${_apiBase}comics/${id}?apikey=${_apiKey}`);
+        return _transformComic(res.data.results[0]);
+    }, [request]);
+
+    const getAllCharacters = useCallback(async (offset = _baseOffset) => {
+        const res = await request(`${_apiBase}characters?limit=9&offset=${offset}&apikey=${_apiKey}`);
+        return res.data.results.map(_transformCharacter);
+    }, [request]);
+
+    const getCharacter = useCallback(async (id) => {
+        const res = await request(`${_apiBase}characters/${id}?apikey=${_apiKey}`);
+        return _transformCharacter(res.data.results[0]);
+    }, [request]);
+
+    const _transformComic = (comic) => {
         const thumbnail = `${comic.thumbnail.path}.${comic.thumbnail.extension}`;
         const isImageAvailable = !comic.thumbnail.path.includes('image_not_available');
 
         return {
             id: comic.id,
-            title: comic.title || 'No title',
-            price: comic.price ? `${comic.price}$` : 'NOT AVAILABLE',
+            title: comic.title || 'Без названия',
+            description: comic.description || 'Описание отсутствует',
+            pageCount: comic.pageCount ? `${comic.pageCount} pages` : 'No information about the number of pages',
             thumbnail,
+            language: comic.textObjects?.languages || 'en-us',
+            price: comic.prices?.[0]?.price ? `${comic.prices[0].price}$` : 'NOT AVAILABLE',
             homepage: comic.urls?.[0]?.url || '#',
-            imageAvailable: isImageAvailable
+            imageAvailable: isImageAvailable,
         };
-    };
-
-    const getAllCharacters = async (offset = _baseOffset) => {
-        const res = await request(`${_apiBase}characters?limit=9&offset=${offset}&apikey=${_apiKey}`);
-        return res.data.results.map(_transformCharacter);
-    };
-
-    const getCharacter = async (id) => {
-        const res = await request(`${_apiBase}characters/${id}?apikey=${_apiKey}`);
-        return _transformCharacter(res.data.results[0]);
     };
 
     const _transformCharacter = (char) => {
@@ -50,12 +57,11 @@ const useMarvelService = () => {
             homepage: char.urls?.[0]?.url || '#',
             wiki: char.urls?.[1]?.url || '#',
             imageAvailable: isImageAvailable,
-            // comics.items — это массив строк, а не объектов
             comics: (char.comics?.items || []).map(item => ({ name: item })),
         };
     };
 
-    return { loading, error, getAllCharacters, getCharacter, clearError, getAllComics };
+    return { loading, error, getAllCharacters, getCharacter, clearError, getAllComics, getComics };
 };
 
 export default useMarvelService;
